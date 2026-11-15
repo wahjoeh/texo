@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../lib/supabase'
 import { getLearningPath } from '../data/learningPaths'
+import { getLearningQuestions } from '../data/learningQuestions'
 import '../assets/learn.css'
 import '../assets/learning-theme.css'
 
@@ -61,55 +62,25 @@ watch(() => route.fullPath, async () => {
   const skill = route.params.skill
   const lessonId = route.params.lessonId
   const requestToken = ++questionLoadToken
+  lessonQuestions.value = getLearningQuestions(skill, lessonId)
   questionLoading.value = false
-  lessonQuestions.value = []
   questionIndex.value = 0
   selectedOption.value = ''
   answerFeedback.value = null
   questionAttempts.value = 0
   questionError.value = ''
-  if (!lessonId || !supabase || !getLearningPath(skill)) return
+  if (!lessonId || !supabase || !getLearningPath(skill) || !lessonQuestions.value.length) return
 
-  questionLoading.value = true
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  const questionIds = lessonQuestions.value.map(item => item.id)
+  const { data: { session } } = await supabase.auth.getSession()
+  if (requestToken !== questionLoadToken || !session?.user) return
+  const { data: attempts } = await supabase
+    .from('user_learning_answers')
+    .select('question_id, attempt_count')
+    .eq('user_id', session.user.id)
+    .in('question_id', questionIds)
   if (requestToken !== questionLoadToken) return
-  if (userError || !user) {
-    questionError.value = 'Sesi login tidak ditemukan. Silakan masuk kembali.'
-    questionLoading.value = false
-    return
-  }
-
-  const { data, error } = await supabase
-    .from('learning_questions')
-    .select('id, prompt, options, sort_order')
-    .eq('skill', skill)
-    .eq('lesson_id', lessonId)
-    .eq('is_active', true)
-    .order('sort_order')
-
-  if (requestToken !== questionLoadToken) return
-  if (error) {
-    questionError.value = 'Contoh soal belum dapat dimuat. Terapkan migrasi bank soal di Supabase.'
-    questionLoading.value = false
-    return
-  }
-  const databaseQuestions = data ?? []
-  const fallbackQuestion = getLearningPath(skill)?.lessons.find(item => item.id === lessonId)?.exampleQuestion
-  lessonQuestions.value = databaseQuestions.length
-    ? databaseQuestions
-    : fallbackQuestion ? [fallbackQuestion] : []
-  questionLoading.value = false
-
-  if (lessonQuestions.value.length) {
-    const questionIds = lessonQuestions.value.map(item => item.id)
-    const { data: attempts } = await supabase
-      .from('user_learning_answers')
-      .select('question_id, attempt_count')
-      .eq('user_id', user.id)
-      .in('question_id', questionIds)
-    if (requestToken !== questionLoadToken) return
-    questionAttempts.value = attempts?.find(item => item.question_id === currentQuestion.value?.id)?.attempt_count ?? 0
-  }
+  questionAttempts.value = attempts?.find(item => item.question_id === currentQuestion.value?.id)?.attempt_count ?? 0
 })
 
 async function toggleCompletion() {
@@ -152,16 +123,17 @@ async function checkAnswer() {
   if (!currentQuestion.value || !selectedOption.value || questionSaving.value) return
   questionSaving.value = true
   questionError.value = ''
-  answerFeedback.value = null
-  const { data, error } = await supabase.rpc('submit_learning_answer', {
+  const isCorrect = selectedOption.value === currentQuestion.value.correctOption
+  answerFeedback.value = { is_correct: isCorrect, explanation: currentQuestion.value.explanation }
+  const { data, error } = await supabase.rpc('record_learning_answer', {
     p_question_id: currentQuestion.value.id,
     p_selected_option: selectedOption.value,
+    p_is_correct: isCorrect,
   })
   if (error) {
-    questionError.value = 'Jawaban belum dapat disimpan. Pastikan migrasi bank soal sudah diterapkan.'
+    questionError.value = 'Jawaban sudah diperiksa, tetapi riwayatnya belum tersimpan. Terapkan migrasi belajar terbaru di Supabase.'
   } else {
-    answerFeedback.value = Array.isArray(data) ? data[0] : data
-    questionAttempts.value = answerFeedback.value?.attempts_count ?? questionAttempts.value
+    questionAttempts.value = Number(data) || questionAttempts.value + 1
   }
   questionSaving.value = false
 }

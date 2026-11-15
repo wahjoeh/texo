@@ -11,12 +11,6 @@ export const learningPaths = [
         id: 'main-idea',
         title: 'Menemukan ide utama',
         duration: '8 menit',
-        exampleQuestion: {
-          id: 'reading-main-idea-q1',
-          prompt: 'Which sentence best expresses the main idea? “Urban trees lower summer temperatures. Their shade cools sidewalks, and their leaves release moisture into the air. As a result, neighborhoods with more trees are often cooler than nearby areas.”',
-          options: { A: 'Trees are difficult to maintain in cities.', B: 'Urban trees help cool neighborhoods in more than one way.', C: 'Sidewalks are warmer than nearby buildings.', D: 'Most trees release moisture only in summer.' },
-          sort_order: 1,
-        },
         objective: 'Membedakan topik, ide utama, dan detail pendukung dalam sebuah paragraf.',
         sections: [
           { heading: 'Mulai dari gambaran besar', body: 'Baca kalimat pertama dan terakhir paragraf untuk menangkap topiknya. Setelah itu, tanyakan: apa yang ingin disampaikan penulis tentang topik tersebut?' },
@@ -60,12 +54,6 @@ export const learningPaths = [
         id: 'predict-context',
         title: 'Memprediksi konteks percakapan',
         duration: '7 menit',
-        exampleQuestion: {
-          id: 'listening-predict-context-q1',
-          prompt: 'A student says, “I have a presentation tomorrow, but the projector in our room is not working.” What is the most likely purpose of the conversation?',
-          options: { A: 'To ask for help finding a working projector', B: 'To cancel the presentation permanently', C: 'To explain how projectors are manufactured', D: 'To invite a professor to dinner' },
-          sort_order: 1,
-        },
         objective: 'Menggunakan situasi dan pembicara untuk memperkirakan arah percakapan.',
         sections: [
           { heading: 'Dengarkan situasinya', body: 'Perhatikan siapa yang berbicara dan di mana percakapan mungkin terjadi. Hubungan pembicara membantu mempersempit kemungkinan jawaban.' },
@@ -109,12 +97,6 @@ export const learningPaths = [
         id: 'sentence-patterns',
         title: 'Pola dasar kalimat',
         duration: '8 menit',
-        exampleQuestion: {
-          id: 'structure-sentence-patterns-q1',
-          prompt: 'Choose the word that correctly completes the sentence: “The results of the experiment ___ published yesterday.”',
-          options: { A: 'was', B: 'were', C: 'is', D: 'has' },
-          sort_order: 1,
-        },
         objective: 'Menemukan subjek dan kata kerja utama dalam kalimat akademik.',
         sections: [
           { heading: 'Cari inti kalimat', body: 'Tentukan subjek dan kata kerja utama sebelum memeriksa frasa tambahan. Prepositional phrase dan klausa sisipan tidak mengubah inti kalimat.' },
