@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../lib/supabase'
 import { getLearningPath } from '../data/learningPaths'
 import { getLearningQuestions } from '../data/learningQuestions'
+import LearningQuestionCard from '../components/LearningQuestionCard.vue'
 import '../assets/learn.css'
 import '../assets/learning-theme.css'
 
@@ -11,16 +12,13 @@ const route = useRoute()
 const router = useRouter()
 const loading = ref(true)
 const saving = ref(false)
-const questionLoading = ref(false)
-const questionSaving = ref(false)
 const errorMessage = ref('')
-const questionError = ref('')
 const completedLessons = ref([])
 const lessonQuestions = ref([])
-const questionIndex = ref(0)
-const selectedOption = ref('')
-const answerFeedback = ref(null)
-const questionAttempts = ref(0)
+const questionAttempts = ref({})
+const answerSaving = ref({})
+const answerErrors = ref({})
+const miniTestResults = ref({})
 let questionLoadToken = 0
 const path = computed(() => getLearningPath(route.params.skill))
 const lesson = computed(() => path.value?.lessons.find(item => item.id === route.params.lessonId) ?? null)
@@ -28,7 +26,22 @@ const completionCount = computed(() => completedLessons.value.length)
 const progressPercent = computed(() => path.value ? Math.round(completionCount.value / path.value.lessons.length * 100) : 0)
 const lessonIndex = computed(() => path.value?.lessons.findIndex(item => item.id === lesson.value?.id) ?? -1)
 const isComplete = computed(() => lesson.value && completedLessons.value.includes(lesson.value.id))
-const currentQuestion = computed(() => lessonQuestions.value[questionIndex.value] ?? null)
+const lessonSequence = computed(() => {
+  const sections = lesson.value?.sections ?? []
+  const questions = lessonQuestions.value
+  return [
+    sections[0] ? { type: 'material', section: sections[0], number: 1 } : null,
+    questions[0] ? { type: 'question', question: questions[0], stateKey: 'inline-1', number: 1 } : null,
+    sections[1] ? { type: 'material', section: sections[1], number: 2 } : null,
+    questions[1] ? { type: 'question', question: questions[1], stateKey: 'inline-2', number: 2 } : null,
+  ].filter(Boolean)
+})
+const miniTestScore = computed(() => {
+  if (!lessonQuestions.value.length) return null
+  const results = lessonQuestions.value.map(question => miniTestResults.value[question.id])
+  if (results.some(result => result === undefined)) return null
+  return { correct: results.filter(Boolean).length, total: results.length }
+})
 
 watch(() => route.params.skill, async skill => {
   loading.value = true
@@ -63,12 +76,10 @@ watch(() => route.fullPath, async () => {
   const lessonId = route.params.lessonId
   const requestToken = ++questionLoadToken
   lessonQuestions.value = getLearningQuestions(skill, lessonId)
-  questionLoading.value = false
-  questionIndex.value = 0
-  selectedOption.value = ''
-  answerFeedback.value = null
-  questionAttempts.value = 0
-  questionError.value = ''
+  questionAttempts.value = {}
+  answerSaving.value = {}
+  answerErrors.value = {}
+  miniTestResults.value = {}
   if (!lessonId || !supabase || !getLearningPath(skill) || !lessonQuestions.value.length) return
 
   const questionIds = lessonQuestions.value.map(item => item.id)
@@ -80,7 +91,7 @@ watch(() => route.fullPath, async () => {
     .eq('user_id', session.user.id)
     .in('question_id', questionIds)
   if (requestToken !== questionLoadToken) return
-  questionAttempts.value = attempts?.find(item => item.question_id === currentQuestion.value?.id)?.attempt_count ?? 0
+  questionAttempts.value = Object.fromEntries((attempts ?? []).map(item => [item.question_id, item.attempt_count]))
 }, { immediate: true })
 
 async function toggleCompletion() {
@@ -119,23 +130,29 @@ function openLesson(index) {
   if (target) router.push(`/learn/${path.value.id}/${target.id}`)
 }
 
-async function checkAnswer() {
-  if (!currentQuestion.value || !selectedOption.value || questionSaving.value) return
-  questionSaving.value = true
-  questionError.value = ''
-  const isCorrect = selectedOption.value === currentQuestion.value.correctOption
-  answerFeedback.value = { is_correct: isCorrect, explanation: currentQuestion.value.explanation }
-  const { data, error } = await supabase.rpc('record_learning_answer', {
-    p_question_id: currentQuestion.value.id,
-    p_selected_option: selectedOption.value,
-    p_is_correct: isCorrect,
-  })
-  if (error) {
-    questionError.value = 'Jawaban sudah diperiksa, tetapi riwayatnya belum tersimpan. Terapkan migrasi belajar terbaru di Supabase.'
-  } else {
-    questionAttempts.value = Number(data) || questionAttempts.value + 1
+function answerQuestion({ questionId, selectedOption, isCorrect, stateKey }) {
+  if (!supabase || answerSaving.value[stateKey]) return
+  answerSaving.value = { ...answerSaving.value, [stateKey]: true }
+  answerErrors.value = { ...answerErrors.value, [stateKey]: '' }
+  if (stateKey.startsWith('final-')) {
+    miniTestResults.value = { ...miniTestResults.value, [questionId]: isCorrect }
   }
-  questionSaving.value = false
+
+  supabase.rpc('record_learning_answer', {
+    p_question_id: questionId,
+    p_selected_option: selectedOption,
+    p_is_correct: isCorrect,
+  }).then(({ data, error }) => {
+    if (error) {
+      answerErrors.value = { ...answerErrors.value, [stateKey]: 'Jawaban sudah diperiksa, tetapi riwayatnya belum tersimpan.' }
+      return
+    }
+    questionAttempts.value = { ...questionAttempts.value, [questionId]: Number(data) || (questionAttempts.value[questionId] ?? 0) + 1 }
+  }).catch(() => {
+    answerErrors.value = { ...answerErrors.value, [stateKey]: 'Jawaban sudah diperiksa, tetapi riwayatnya belum tersimpan.' }
+  }).finally(() => {
+    answerSaving.value = { ...answerSaving.value, [stateKey]: false }
+  })
 }
 </script>
 
@@ -157,32 +174,49 @@ async function checkAnswer() {
         </aside>
 
         <article v-if="lesson" class="learn-lesson-content">
-          <div class="learn-lesson-meta"><span>{{ path.label }}</span><span>{{ lesson.duration }}</span></div>
+          <div class="learn-lesson-meta"><span>{{ path.label }}</span><span>{{ lesson.duration }}</span><span>Materi · latihan · tes</span></div>
           <h2>{{ lesson.title }}</h2>
           <p class="learn-objective"><strong>Tujuan belajar</strong>{{ lesson.objective }}</p>
-          <section v-for="(section, index) in lesson.sections" :key="section.heading" class="learn-content-section">
-            <span class="learn-content-index">{{ String(index + 1).padStart(2, '0') }}</span><div><h3>{{ section.heading }}</h3><p>{{ section.body }}</p></div>
-          </section>
+          <div class="learn-sequence">
+            <template v-for="step in lessonSequence" :key="step.type === 'material' ? step.section.heading : step.stateKey">
+              <section v-if="step.type === 'material'" class="learn-content-section learn-material-step">
+                <span class="learn-content-index">{{ String(step.number).padStart(2, '0') }}</span>
+                <div><span class="learn-material-label">MATERI {{ String(step.number).padStart(2, '0') }}</span><h3>{{ step.section.heading }}</h3><p>{{ step.section.body }}</p></div>
+              </section>
+              <LearningQuestionCard
+                v-else
+                :question="step.question"
+                :state-key="step.stateKey"
+                :question-number="step.number"
+                title="Latihan materi"
+                :attempts="questionAttempts[step.question.id] ?? 0"
+                :saving="answerSaving[step.stateKey] ?? false"
+                :save-error="answerErrors[step.stateKey] ?? ''"
+                @answer="answerQuestion"
+              />
+            </template>
+          </div>
           <aside class="learn-check-card"><span>💡 Cek pemahaman</span><p>{{ lesson.check }}</p></aside>
 
-          <section class="learn-question-card" aria-label="Contoh soal">
-            <div class="learn-question-heading"><span>LATIHAN SINGKAT</span><small v-if="questionAttempts">Sudah dicoba {{ questionAttempts }}×</small></div>
-            <p v-if="questionLoading" class="learn-question-prompt">Memuat contoh soal…</p>
-            <template v-else-if="currentQuestion">
-              <p class="learn-question-prompt">{{ currentQuestion.prompt }}</p>
-              <div class="learn-answer-options">
-                <button v-for="[key, option] in Object.entries(currentQuestion.options ?? {})" :key="key" type="button" class="learn-answer-option" :class="{ selected: selectedOption === key }" :disabled="questionSaving" @click="selectedOption = key; answerFeedback = null">
-                  <span>{{ key }}</span><span>{{ option }}</span>
-                </button>
-              </div>
-              <button class="learn-check-answer" type="button" :disabled="!selectedOption || questionSaving" @click="checkAnswer">{{ questionSaving ? 'Memeriksa…' : 'Periksa jawaban' }}</button>
-              <div v-if="answerFeedback" class="learn-answer-feedback" :class="{ correct: answerFeedback.is_correct }" role="status">
-                <strong>{{ answerFeedback.is_correct ? 'Jawaban benar!' : 'Belum tepat, coba pahami pembahasannya.' }}</strong>
-                <p>{{ answerFeedback.explanation }}</p>
-              </div>
-            </template>
-            <p v-else-if="!questionError" class="learn-question-prompt">Belum ada soal untuk materi ini.</p>
-            <p v-if="questionError" class="learn-error" role="alert">{{ questionError }}</p>
+          <section v-if="lessonQuestions.length" class="learn-mini-test">
+            <div class="learn-mini-test-heading"><span class="learn-mini-test-icon">✦</span><div><span class="learn-eyebrow">TES AKHIR SINGKAT</span><h3>Coba tanpa melihat materi</h3><p>Ulangi tiga soal untuk mengecek pemahamanmu.</p></div></div>
+            <LearningQuestionCard
+              v-for="(question, index) in lessonQuestions"
+              :key="`final-${question.id}`"
+              :question="question"
+              :state-key="`final-${question.id}`"
+              :question-number="index + 1"
+              title="Tes akhir"
+              :attempts="questionAttempts[question.id] ?? 0"
+              :saving="answerSaving[`final-${question.id}`] ?? false"
+              :save-error="answerErrors[`final-${question.id}`] ?? ''"
+              @answer="answerQuestion"
+            />
+            <div v-if="miniTestScore" class="learn-mini-test-score" role="status">
+              <span>{{ miniTestScore.correct === miniTestScore.total ? '🏆' : '📊' }}</span>
+              <strong>Hasil tes akhir: {{ miniTestScore.correct }}/{{ miniTestScore.total }} benar</strong>
+              <small>{{ miniTestScore.correct === miniTestScore.total ? 'Mantap, semua konsep sudah kamu kuasai.' : 'Baca lagi bagian yang perlu diperkuat, lalu coba kembali.' }}</small>
+            </div>
           </section>
 
           <p v-if="errorMessage" class="learn-error" role="alert">{{ errorMessage }}</p>
