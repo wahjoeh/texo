@@ -11,7 +11,7 @@ const route = useRoute()
 const router = useRouter()
 const loading = ref(true)
 const saving = ref(false)
-const questionLoading = ref(true)
+const questionLoading = ref(false)
 const questionSaving = ref(false)
 const errorMessage = ref('')
 const questionError = ref('')
@@ -81,7 +81,7 @@ watch(() => route.fullPath, async () => {
     .in('question_id', questionIds)
   if (requestToken !== questionLoadToken) return
   questionAttempts.value = attempts?.find(item => item.question_id === currentQuestion.value?.id)?.attempt_count ?? 0
-})
+}, { immediate: true })
 
 async function toggleCompletion() {
   if (!lesson.value || !supabase || saving.value) return
