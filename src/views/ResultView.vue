@@ -1,14 +1,20 @@
 <script setup>
 import { useRoute } from 'vue-router'
 import { useRouter } from 'vue-router'
+import { onMounted } from 'vue'
+import { recordTestAttempt } from '../lib/scores'
 
 import '../assets/result.css'
+import '../assets/home-test-theme.css'
 
 const route = useRoute()
 const router = useRouter()
 
 const section =
-  route.query.section || 'reading'
+  String(route.query.section || 'reading')
+
+const attemptId =
+  String(route.query.attemptId || '') || crypto.randomUUID()
 
 const correct =
   Number(route.query.correct || 0)
@@ -29,6 +35,20 @@ const percentage =
 const goHome = () => {
   router.push('/')
 }
+
+onMounted(async () => {
+  try {
+    await recordTestAttempt(attemptId, [{
+      testType: section,
+      score: converted,
+      correct,
+      total,
+      details: { percentage },
+    }])
+  } catch (error) {
+    console.error('Unable to save the latest section score.', error)
+  }
+})
 </script>
 
 <template>

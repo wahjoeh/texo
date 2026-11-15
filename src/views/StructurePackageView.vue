@@ -1,8 +1,11 @@
 <script setup>
 import logo from '../assets/logo.png'
+import AccountMenu from '../components/AccountMenu.vue'
 import { useRouter } from 'vue-router'
 
 import '../assets/structure.css'
+import '../assets/exam-responsive.css'
+import '../assets/home-test-theme.css'
 
 const router = useRouter()
 
@@ -56,6 +59,7 @@ const openPackage = packageId => {
 
     </div>
 
+    <div class="header-right"><AccountMenu /></div>
   </header>
 
   <div class="package-page">

@@ -1,9 +1,12 @@
 <script setup>
 import logo from '../assets/logo.png'
+import AccountMenu from '../components/AccountMenu.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
 import '../assets/reading.css'
+import '../assets/exam-responsive.css'
+import '../assets/home-test-theme.css'
 import { readingSections as package1 }
 from '../data/reading/package1'
 
@@ -86,6 +89,7 @@ const questions = readingSections
 
 const answers = ref({})
 const currentQuestion = ref(0)
+const questionNavOpen = ref(false)
 
 const timeLeft = ref(3000)
 
@@ -146,6 +150,7 @@ const prevQuestion = () => {
 
 const goToQuestion = index => {
   currentQuestion.value = index
+  questionNavOpen.value = false
 }
 
 const submitTest = () => {
@@ -182,6 +187,8 @@ const submitTest = () => {
       query: {
 
         section: 'reading',
+
+        attemptId: crypto.randomUUID(),
 
         correct,
 
@@ -234,9 +241,7 @@ const submitTest = () => {
         {{ formatTime() }}
       </div>
 
-      <div class="profile-circle">
-        W
-      </div>
+      <AccountMenu />
 
     </div>
 
@@ -244,11 +249,17 @@ const submitTest = () => {
 
   <div class="exam-container">
 
-    <aside class="sidebar">
+    <button class="question-nav-toggle" :class="{ 'question-nav-toggle-open': questionNavOpen }" type="button" @click="questionNavOpen = !questionNavOpen" :aria-expanded="questionNavOpen" :aria-label="questionNavOpen ? 'Tutup daftar soal' : 'Buka daftar soal'" aria-controls="question-navigation">
+      <span aria-hidden="true"></span>
+    </button>
+    <button v-if="questionNavOpen" class="question-nav-overlay" type="button" aria-label="Tutup daftar soal" @click="questionNavOpen = false"></button>
 
-      <h2 class="sidebar-title">
-        Navigasi Soal
-      </h2>
+    <aside id="question-navigation" class="sidebar" :class="{ 'question-nav-open': questionNavOpen }">
+
+      <div class="question-nav-heading">
+        <h2 class="sidebar-title">Daftar Soal</h2>
+        <button class="question-nav-close" type="button" aria-label="Tutup daftar soal" @click="questionNavOpen = false">×</button>
+      </div>
 
       <div class="question-grid">
 

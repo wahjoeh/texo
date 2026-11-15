@@ -1,5 +1,9 @@
 <script setup>
 import '../assets/full-result.css'
+import '../assets/home-test-theme.css'
+import { onMounted } from 'vue'
+import { recordTestAttempt } from '../lib/scores'
+import { getToeflRank } from '../utils/toeflRanks'
 
 import {
   convertListeningScore,
@@ -51,6 +55,54 @@ const finalScore =
     structureCorrect,
     readingCorrect
   )
+const finalRank = getToeflRank(finalScore)
+
+onMounted(async () => {
+  try {
+    let attemptId = sessionStorage.getItem('fullTestAttemptId')
+    if (!attemptId) {
+      attemptId = crypto.randomUUID()
+      sessionStorage.setItem('fullTestAttemptId', attemptId)
+    }
+
+    await recordTestAttempt(attemptId, [
+      {
+        testType: 'listening',
+        score: listeningScaled,
+        correct: listeningCorrect,
+        total: 50,
+        details: { source: 'full_test' },
+      },
+      {
+        testType: 'structure',
+        score: structureScaled,
+        correct: structureCorrect,
+        total: 40,
+        details: { source: 'full_test' },
+      },
+      {
+        testType: 'reading',
+        score: readingScaled,
+        correct: readingCorrect,
+        total: 50,
+        details: { source: 'full_test' },
+      },
+      {
+        testType: 'full_test',
+        score: finalScore,
+        correct: listeningCorrect + structureCorrect + readingCorrect,
+        total: 140,
+        details: {
+          listening: listeningScaled,
+          structure: structureScaled,
+          reading: readingScaled,
+        },
+      },
+    ])
+  } catch (error) {
+    console.error('Unable to save the latest full-test score.', error)
+  }
+})
 </script>
 
 <template>
@@ -137,6 +189,10 @@ const finalScore =
         <div class="final-score">
           {{ finalScore }}
         </div>
+
+        <span v-if="finalRank" class="full-test-rank" :class="`rank-${finalRank.color}`">
+          {{ finalRank.name }}
+        </span>
 
       </div>
 

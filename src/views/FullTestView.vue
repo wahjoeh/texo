@@ -1,9 +1,12 @@
 <script setup>
 import logo from '../assets/logo.png'
+import AccountMenu from '../components/AccountMenu.vue'
 import { useRouter, useRoute } from 'vue-router'
 
 import '../assets/reading.css'
 import '../assets/full-test.css'
+import '../assets/exam-responsive.css'
+import '../assets/home-test-theme.css'
 
 const router = useRouter()
 const route = useRoute()
@@ -46,6 +49,7 @@ const startFullTest = () => {
 
     </div>
 
+    <div class="header-right"><AccountMenu /></div>
   </header>
 
   <div class="full-test-page">

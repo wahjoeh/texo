@@ -12,6 +12,9 @@ import FullTestView from '../views/FullTestView.vue'
 import ResultView from '../views/ResultView.vue'
 import FullResultView from '../views/FullResultView.vue'
 import LoginView from '../views/LoginView.vue'
+import ProfileView from '../views/ProfileView.vue'
+import LearnView from '../views/LearnView.vue'
+import LearnPathView from '../views/LearnPathView.vue'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 
 const router = createRouter({
@@ -19,6 +22,10 @@ const router = createRouter({
 
   routes: [
     { path: '/login', component: LoginView },
+    { path: '/profile', component: ProfileView, meta: { requiresAuth: true } },
+    { path: '/learn', component: LearnView, meta: { requiresAuth: true } },
+    { path: '/learn/:skill', component: LearnPathView, meta: { requiresAuth: true } },
+    { path: '/learn/:skill/:lessonId', component: LearnPathView, meta: { requiresAuth: true } },
     {
       path: '/',
       component: HomeView, meta: { requiresAuth: true }
@@ -26,32 +33,32 @@ const router = createRouter({
 
     {
       path: '/listening',
-      component: ListeningPackageView, meta: { requiresAuth: true }
+      component: ListeningPackageView, meta: { requiresAuth: true, hasPageHeader: true }
     },
 
     {
       path: '/reading',
-      component: ReadingPackageView, meta: { requiresAuth: true }
+      component: ReadingPackageView, meta: { requiresAuth: true, hasPageHeader: true }
     },
 
     {
       path: '/reading/:packageId',
-      component: ReadingView, meta: { requiresAuth: true }
+      component: ReadingView, meta: { requiresAuth: true, hasPageHeader: true }
     },
 
     {
       path: '/listening/:packageId',
-      component: ListeningView, meta: { requiresAuth: true }
+      component: ListeningView, meta: { requiresAuth: true, hasPageHeader: true }
     },
 
     {
       path: '/structure',
-      component: StructurePackageView, meta: { requiresAuth: true }
+      component: StructurePackageView, meta: { requiresAuth: true, hasPageHeader: true }
     },
 
     {
       path: '/structure/:packageId',
-      component: StructureView, meta: { requiresAuth: true }
+      component: StructureView, meta: { requiresAuth: true, hasPageHeader: true }
     },
 
     {
@@ -61,7 +68,7 @@ const router = createRouter({
 
     {
       path: '/full-test',
-      component: FullTestPackageView, meta: { requiresAuth: true }
+      component: FullTestPackageView, meta: { requiresAuth: true, hasPageHeader: true }
     },
 
     {
@@ -71,7 +78,7 @@ const router = createRouter({
     
     {
       path: '/full-test/:packageId',
-      component: FullTestView, meta: { requiresAuth: true }
+      component: FullTestView, meta: { requiresAuth: true, hasPageHeader: true }
     }
 
   ]

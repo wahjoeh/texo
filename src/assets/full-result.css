@@ -113,6 +113,9 @@
   font-weight:700;
 }
 
+.full-test-rank{display:inline-block;margin-top:8px;padding:7px 15px;border:1px solid #ffffff70;border-radius:999px;background:#ffffff20;color:#fff;font-size:13px;font-weight:700;letter-spacing:.03em}
+.rank-bronze{--rank-bg:#f3e4d6;--rank-fg:#8b552f}.rank-silver{--rank-bg:#edf0f4;--rank-fg:#64748b}.rank-gold{--rank-bg:#fff3cf;--rank-fg:#9a6b00}.rank-diamond{--rank-bg:#e3efff;--rank-fg:#2863b2}.rank-platinum{--rank-bg:#e2f5f3;--rank-fg:#247b74}.rank-master{--rank-bg:#f0e7ff;--rank-fg:#7143b1}.rank-grandmaster{--rank-bg:#ffe8ec;--rank-fg:#b43852}
+
 .home-btn{
   display:block;
 

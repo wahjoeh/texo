@@ -1,5 +1,6 @@
 <script setup>
 import logo from '../assets/logo.png'
+import AccountMenu from '../components/AccountMenu.vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -18,6 +19,10 @@ const packages = [
 ]
 
 const openPackage = packageId => {
+  sessionStorage.removeItem('fullListeningCorrect')
+  sessionStorage.removeItem('fullStructureCorrect')
+  sessionStorage.removeItem('fullReadingCorrect')
+  sessionStorage.setItem('fullTestAttemptId', crypto.randomUUID())
   router.push(`/listening/${packageId}?fullTest=true`)
 }
 </script>
@@ -39,6 +44,7 @@ const openPackage = packageId => {
         </p>
       </div>
     </div>
+    <div class="header-right"><AccountMenu /></div>
   </header>
 
   <div class="package-page">
@@ -78,3 +84,5 @@ const openPackage = packageId => {
 </template>
 
 <style src="../assets/reading-package.css"></style>
+<style src="../assets/exam-responsive.css"></style>
+<style src="../assets/home-test-theme.css"></style>
